@@ -3,83 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Family Cart 2.0</title>
+    <title>Family Cart Pro</title>
     <style>
         :root { 
             --primary: #4CAF50; --bg: #f0f2f5; --accent: #ff9800; --danger: #ff5252; --text: #333; 
             --c1: #2ecc71; --c2: #e74c3c; --c3: #f1c40f; --c4: #e67e22; 
             --c5: #3498db; --c6: #1abc9c; --c7: #9b59b6; --c8: #95a5a6;
         }
-        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); line-height: 1.4; }
-        .container { max-width: 500px; margin: 0 auto; min-height: 100vh; padding-bottom: 40px; display: none; }
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin: 12px; }
-        .overlay { position: fixed; inset: 0; background: var(--bg); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
-        .auth-card { background: white; padding: 30px; border-radius: 25px; width: 100%; max-width: 320px; text-align: center; }
+        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
+        .page { display: none; min-height: 100vh; padding-bottom: 80px; }
+        .page.active { display: block; }
         
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
-        .btn { border: none; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-p { width: 100%; padding: 14px; background: var(--primary); color: white; }
-        .btn-mart { width: 100%; padding: 14px; background: white; border: 2px solid var(--accent); color: var(--accent); margin-bottom: 15px; }
-        .btn-mart.active { background: var(--accent); color: white; }
-        .btn-logout { background: none; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; }
+        /* Navigation */
+        .nav-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; }
+        .nav-item { flex: 1; text-align: center; padding: 15px 0; font-size: 0.8rem; color: #888; cursor: pointer; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
 
-        .status-tag { background: #e8f5e9; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; border: 1px solid #c8e6c9; }
-        .item-list { list-style: none; padding: 0; }
-        .item-card { 
-            background: white; margin: 0 12px 10px; padding: 15px; border-radius: 15px; 
-            display: flex; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03); 
-            position: relative; overflow: hidden;
-        }
-        .item-card.done { opacity: 0.5; filter: grayscale(1); }
+        /* UI Elements */
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin: 12px; }
+        .btn { border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-p { width: 100%; padding: 14px; background: var(--primary); color: white; }
+        .btn-done { background: #2196F3; color: white; padding: 10px 20px; border-radius: 10px; width: calc(100% - 24px); margin: 0 12px 10px; }
+        
+        /* List Styles */
+        .item-card { background: white; margin: 0 12px 10px; padding: 15px; border-radius: 15px; display: flex; align-items: center; position: relative; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+        .item-card.checked { background: #f9f9f9; border: 1px solid #eee; }
+        .item-card.checked .item-name { text-decoration: line-through; color: #aaa; }
         .cat-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; }
-        .cat-label { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; color: white; font-weight: bold; }
-        .delete-btn { color: var(--danger); font-size: 1.4rem; padding: 0 10px; cursor: pointer; }
+        
+        /* History Styles */
+        .history-card { cursor: pointer; border-left: 5px solid var(--primary); margin-bottom: 10px; }
+        .history-detail { background: #fdfdfd; border-radius: 10px; padding: 10px; margin-top: 10px; display: none; font-size: 0.9rem; border: 1px dashed #ccc; }
+
+        /* Overlays */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
+        .modal { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 320px; }
     </style>
 </head>
 <body>
 
-<div id="mart-banner" style="display:none; background:var(--accent); color:white; text-align:center; padding:10px; font-weight:bold; position:sticky; top:0; z-index:1000;"></div>
+<div id="mart-banner" style="display:none; background:var(--accent); color:white; text-align:center; padding:10px; font-weight:bold; position:sticky; top:0; z-index:1100;"></div>
 
-<div id="auth-overlay" class="overlay">
-    <div class="auth-card">
-        <h2 style="color:var(--primary);">👨‍👩‍👧‍👦 R U Family?</h2>
-        <input type="text" id="nickInput" placeholder="닉네임">
-        <input type="password" id="pwInput" placeholder="비밀번호(관리자)">
-        <button id="loginBtn" class="btn btn-p">입장하기</button>
-    </div>
-</div>
-
-<div id="wait-overlay" class="overlay">
-    <div class="auth-card">
-        <h2>⏳ 승인 대기</h2>
-        <p>관리자의 승인을 기다리고 있습니다.</p>
-        <button onclick="location.reload()" class="btn btn-p" style="margin-bottom:10px;">새로고침</button>
-        <button onclick="logout()" class="btn-logout" style="width:100%; padding:12px;">로그아웃</button>
-    </div>
-</div>
-
-<div class="container" id="main-ui">
-    <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="margin:0;">Members</h3>
-            <button onclick="logout()" class="btn-logout">로그아웃</button>
-        </div>
-        <div id="status-list" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;"></div>
-    </div>
-
-    <div id="admin-panel" class="card" style="display:none; border: 2px solid var(--primary);">
-        <h4 style="margin-top:0; color:var(--primary);">관리자 패널</h4>
-        <div id="member-mgmt"></div>
+<div id="page-cart" class="page active">
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0;">Family Cart</h2>
+        <button onclick="logout()" class="btn" style="color:var(--danger); background:none;">로그아웃</button>
     </div>
 
     <div class="card">
-        <button id="martBtn" class="btn btn-mart">🛒 I'm in Mart!</button>
+        <button id="martBtn" class="btn btn-p" style="background:var(--accent); margin-bottom:10px;">🛒 마트 입장 체크</button>
         <div style="display:flex; gap:8px;">
-            <input type="text" id="itemInput" placeholder="살 것을 적어주세요" style="margin:0;">
-            <button id="addBtn" class="btn btn-p" style="width:70px;">추가</button>
+            <input type="text" id="itemInput" placeholder="무엇을 살까요?" style="flex:1; padding:12px; border:1px solid #ddd; border-radius:12px;">
+            <button id="addBtn" class="btn btn-p" style="width:60px;">추가</button>
         </div>
     </div>
-    <ul id="itemList" class="item-list"></ul>
+
+    <ul id="itemList" style="list-style:none; padding:0;"></ul>
+    
+    <button id="finishBtn" class="btn btn-done">✅ 장보기 완료 (히스토리 저장)</button>
+</div>
+
+<div id="page-history" class="page">
+    <div class="card">
+        <h2 style="margin:0;">Purchase History</h2>
+        <p style="color:#666; font-size:0.9rem;">지난 장보기 기록을 확인하세요.</p>
+    </div>
+    <div id="historyList"></div>
+</div>
+
+<div class="nav-bar">
+    <div class="nav-item active" onclick="switchPage('cart')">🛒 장바구니</div>
+    <div class="nav-item" onclick="switchPage('history')">📜 구매기록</div>
+</div>
+
+<div id="finish-modal" class="overlay">
+    <div class="modal">
+        <h3>장보기를 완료할까요?</h3>
+        <p style="font-size:0.8rem; color:#666;">체크된 항목들만 히스토리로 이동합니다.</p>
+        <input type="number" id="totalPrice" placeholder="총 결제 금액 (선택)">
+        <input type="text" id="sessionMemo" placeholder="간단한 메모 (예: 이마트에서)">
+        <button id="confirmFinishBtn" class="btn btn-p">완료 및 저장</button>
+        <button onclick="closeModal()" class="btn" style="width:100%; margin-top:10px; background:none;">취소</button>
+    </div>
 </div>
 
 <script type="module">
@@ -90,172 +95,142 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // --- 데이터 정의 (중복 제거를 위해 통합 관리) ---
     const CAT_INFO = {
-        1: { name: "농산", color: "var(--c1)", keys: ["사과","포도","배","바나나","수박","딸기","귤","오렌지","복숭아","토마토","방울토마토","참외","멜론","키위","상추","깻잎","오이","당근","파","양파","마늘","버섯","시금치","브로콜리","무","감자","고구마","호박","애호박","고추","청양고추","파프리카","콩나물","숙주","두부","부추","가지","옥수수"] },
-        2: { name: "정육/수산", color: "var(--c2)", keys: ["삼겹살","목살","소고기","돼지고기","닭고기","닭발","오리고기","한우","등심","안심","국거리","불고기","스테이크","차돌박이","제육","고등어","갈치","오징어","새우","전복","조개","회","굴","꽃게","낙지","문어","생선","연어","명란","반찬고기","수육"] },
-        3: { name: "유제품/빵", color: "var(--c3)", keys: ["우유","요거트","치즈","버터","요구르트","생크림","빵","식빵","베이글","케이크","쿠키","도너츠","잼","계란","달걀","두유","모닝빵"] },
-        4: { name: "가공/조미료", color: "var(--c4)", keys: ["라면","컵라면","과자","초콜릿","사탕","참치","햄","통조림","식용유","참기름","설탕","소금","간장","된장","고추장","밀가루","소스","햇반","스팸"] },
-        5: { name: "냉동/냉장", color: "var(--c5)", keys: ["만두","피자","냉동","돈가스","너겟","아이스크림","얼음","볶음밥","핫도그","소시지","어묵","베이컨","단무지","김치","밀키트","떡볶이"] },
-        6: { name: "주류/음료", color: "var(--c6)", keys: ["생수","커피","음료","콜라","주스","사이다","탄산수","맥주","소주","와인","막걸리","술","차"] },
-        7: { name: "생필품", color: "var(--c7)", keys: ["휴지","물티슈","치약","칫솔","샴푸","린스","비누","바디워시","세제","유연제","기저귀","봉투","건전지","락스"] },
-        8: { name: "기타", color: "var(--c8)", keys: [] }
+        1: { name: "농산", color: "var(--c1)" }, 2: { name: "정육/수산", color: "var(--c2)" },
+        3: { name: "유제품/빵", color: "var(--c3)" }, 4: { name: "가공/조미료", color: "var(--c4)" },
+        5: { name: "냉동/냉장", color: "var(--c5)" }, 6: { name: "주류/음료", color: "var(--c6)" },
+        7: { name: "생필품", color: "var(--c7)" }, 8: { name: "기타", color: "var(--c8)" }
     };
 
     let myUID = localStorage.getItem('userUID');
     let myInfo = null;
 
-    // --- 공통 함수 ---
-    window.logout = () => { localStorage.clear(); location.reload(); };
-    const classify = (name) => {
-        for (let id in CAT_INFO) {
-            if (CAT_INFO[id].keys.some(k => name.includes(k))) return id;
-        }
-        return 8;
+    // --- 페이지 전환 ---
+    window.switchPage = (pageId) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(`page-${pageId}`).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(pageId === 'history') loadHistory();
     };
 
-    // --- 초기화 및 인증 ---
+    // --- 초기화 ---
     const init = async () => {
-        if (!myUID) return document.getElementById('auth-overlay').style.display = 'flex';
-        
+        if (!myUID) { location.href = "login.html"; return; } // 로그인 로직은 기존 유지
         const snap = await get(ref(db, `users/${myUID}`));
-        if (!snap.exists()) return logout();
-
         myInfo = snap.val();
-        
-        if (myInfo.status === 'pending') {
-            document.getElementById('wait-overlay').style.display = 'flex';
-            onValue(ref(db, `users/${myUID}/status`), s => { if(s.val()==='approved') location.reload(); });
-        } else {
-            startApp();
-        }
+        syncCart();
     };
 
-    const startApp = () => {
-        document.getElementById('main-ui').style.display = 'block';
-        if (myInfo.role === 'admin') document.getElementById('admin-panel').style.display = 'block';
-        
-        // Presence 시스템
-        const pRef = ref(db, `presence/${myUID}`);
-        set(pRef, { nick: myInfo.nick });
-        onDisconnect(pRef).remove();
-
-        syncData();
-    };
-
-    // --- 실시간 데이터 동기화 통합 ---
-    const syncData = () => {
-        // 1. 멤버 상태 및 관리 리스트
-        onValue(ref(db, 'users'), snap => {
-            const users = snap.val() || {};
-            const statusList = document.getElementById('status-list');
-            const mgmtList = document.getElementById('member-mgmt');
-            
-            // 현황 리스트 (Presence 기반)
-            get(ref(db, 'presence')).then(pSnap => {
-                const online = pSnap.val() || {};
-                statusList.innerHTML = Object.values(online).map(u => `<span class="status-tag">🟢 ${u.nick}</span>`).join('');
-            });
-
-            // 관리자용 멤버 관리
-            if(myInfo.role === 'admin') {
-                mgmtList.innerHTML = Object.keys(users).map(uid => {
-                    const u = users[uid];
-                    if (u.uid === myUID) return '';
-                    return `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span>${u.nick} (${u.status})</span>
-                        <div>
-                            ${u.status === 'pending' ? `<button onclick="approveUser('${uid}')" style="background:var(--primary); color:white; border:none; border-radius:4px; padding:2px 8px;">승인</button>` : ''}
-                            <button onclick="deleteUser('${uid}')" style="background:var(--danger); color:white; border:none; border-radius:4px; padding:2px 8px;">삭제</button>
-                        </div>
-                    </div>`;
-                }).join('');
-            }
-        });
-
-        // 2. 마트 세션 (배너)
-        onValue(ref(db, 'app_config/mart_session'), snap => {
-            const s = snap.val();
-            const banner = document.getElementById('mart-banner');
-            const btn = document.getElementById('martBtn');
-            if (s?.active) {
-                banner.style.display = 'block';
-                banner.innerText = `🛒 ${s.user}님이 장보는 중...`;
-                btn.classList.toggle('active', s.user === myInfo.nick);
-            } else {
-                banner.style.display = 'none';
-                btn.classList.remove('active');
-            }
-        });
-
-        // 3. 장바구니 리스트
+    // --- 장바구니 동기화 ---
+    const syncCart = () => {
         onValue(ref(db, 'family_list'), snap => {
             const list = document.getElementById('itemList');
             const data = snap.val() || {};
             const sorted = Object.entries(data).map(([id, v]) => ({...v, id}))
-                .sort((a,b) => (a.checked - b.checked) || (a.cat - b.cat) || (b.ts - a.ts));
+                .sort((a,b) => (a.checked - b.checked) || (a.cat - b.cat));
 
             list.innerHTML = sorted.map(item => `
-                <li class="item-card ${item.checked ? 'done' : ''}">
+                <li class="item-card ${item.checked ? 'checked' : ''}">
                     <div class="cat-bar" style="background:${CAT_INFO[item.cat].color}"></div>
-                    <div style="flex:1; cursor:pointer;" onclick="toggleItem('${item.id}', ${item.checked})">
-                        <span class="cat-label" style="background:${CAT_INFO[item.cat].color}">${CAT_INFO[item.cat].name}</span>
-                        <div style="font-weight:bold; font-size:1.1rem;">${item.name}</div>
-                        <small style="color:#999">${item.user} · ${item.date}</small>
+                    <div style="flex:1" onclick="window.toggleItem('${item.id}', ${item.checked})">
+                        <span style="font-size:0.7rem; color:${CAT_INFO[item.cat].color}">${CAT_INFO[item.cat].name}</span>
+                        <div class="item-name" style="font-weight:bold;">${item.name}</div>
                     </div>
-                    <div class="delete-btn" onclick="deleteItem('${item.id}')">×</div>
+                    <div onclick="window.deleteItem('${item.id}')" style="color:var(--danger); cursor:pointer;">×</div>
                 </li>
+            `).join('');
+        });
+
+        // 마트 배너
+        onValue(ref(db, 'app_config/mart_session'), snap => {
+            const s = snap.val();
+            const banner = document.getElementById('mart-banner');
+            banner.style.display = s?.active ? 'block' : 'none';
+            if(s?.active) banner.innerText = `🛒 ${s.user}님이 장보는 중...`;
+        });
+    };
+
+    // --- 히스토리 로드 ---
+    const loadHistory = () => {
+        onValue(ref(db, 'purchase_history'), snap => {
+            const container = document.getElementById('historyList');
+            const data = snap.val() || {};
+            const sorted = Object.entries(data).sort((a,b) => b[1].timestamp - a[1].timestamp);
+
+            container.innerHTML = sorted.map(([id, session]) => `
+                <div class="card history-card" onclick="document.getElementById('det-${id}').style.display = (document.getElementById('det-${id}').style.display==='block'?'none':'block')">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:bold;">📅 ${session.date}</div>
+                            <small style="color:#666;">${session.memo || '메모 없음'}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="color:var(--primary); font-weight:bold;">${session.totalPrice ? Number(session.totalPrice).toLocaleString()+'원' : '금액미입력'}</div>
+                            <small>${session.items.length}개 품목</small>
+                        </div>
+                    </div>
+                    <div id="det-${id}" class="history-detail">
+                        ${session.items.map(i => `• ${i.name}`).join('<br>')}
+                    </div>
+                </div>
             `).join('');
         });
     };
 
-    // --- 액션 함수들 ---
-    document.getElementById('loginBtn').onclick = async () => {
-        const nick = document.getElementById('nickInput').value.trim();
-        const pw = document.getElementById('pwInput').value.trim();
-        if(!nick) return alert("닉네임을 입력하세요.");
-
-        const usersSnap = await get(ref(db, 'users'));
-        const users = usersSnap.val() || {};
-        const existing = Object.values(users).find(u => u.nick === nick);
-
-        if (existing) {
-            localStorage.setItem('userUID', existing.uid);
-            location.reload();
-        } else {
-            const newUID = "u_" + Date.now();
-            const isAdmin = (pw === "1234"); // 실제로는 서버 측 검증이 필요하지만 현재 구조 유지
-            const newUser = { uid: newUID, nick, role: isAdmin?'admin':'member', status: isAdmin?'approved':'pending' };
-            await set(ref(db, `users/${newUID}`), newUser);
-            localStorage.setItem('userUID', newUID);
-            location.reload();
-        }
+    // --- 장보기 완료 처리 ---
+    document.getElementById('finishBtn').onclick = () => {
+        document.getElementById('finish-modal').style.display = 'flex';
     };
 
+    window.closeModal = () => document.getElementById('finish-modal').style.display = 'none';
+
+    document.getElementById('confirmFinishBtn').onclick = async () => {
+        const snap = await get(ref(db, 'family_list'));
+        const data = snap.val() || {};
+        const checkedItems = Object.entries(data).filter(([id, v]) => v.checked);
+        
+        if (checkedItems.length === 0) return alert("체크된 품목이 없습니다.");
+
+        const now = new Date();
+        const sessionData = {
+            timestamp: Date.now(),
+            date: `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,
+            totalPrice: document.getElementById('totalPrice').value,
+            memo: document.getElementById('sessionMemo').value,
+            items: checkedItems.map(([id, v]) => ({ name: v.name, cat: v.cat })),
+            user: myInfo.nick
+        };
+
+        // 1. 히스토리 저장
+        await push(ref(db, 'purchase_history'), sessionData);
+        
+        // 2. 장바구니에서 삭제
+        for (let [id, v] of checkedItems) {
+            await remove(ref(db, `family_list/${id}`));
+        }
+
+        // 3. 마트 세션 종료
+        await set(ref(db, 'app_config/mart_session'), { active: false, user: "" });
+
+        closeModal();
+        alert("장보기가 완료되어 기록되었습니다!");
+        switchPage('history');
+    };
+
+    // --- 기존 액션 ---
+    window.toggleItem = (id, cur) => update(ref(db, `family_list/${id}`), { checked: !cur });
+    window.deleteItem = (id) => confirm("삭제할까요?") && remove(ref(db, `family_list/${id}`));
+    
     document.getElementById('addBtn').onclick = () => {
         const input = document.getElementById('itemInput');
-        const name = input.value.trim();
-        if(!name) return;
-        
-        const now = new Date();
+        if(!input.value.trim()) return;
         push(ref(db, 'family_list'), {
-            name, cat: classify(name), checked: false, user: myInfo.nick, ts: Date.now(),
-            date: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+            name: input.value, cat: 8, checked: false, user: myInfo.nick, ts: Date.now(),
+            date: new Date().toLocaleDateString()
         });
         input.value = '';
     };
-
-    document.getElementById('martBtn').onclick = async () => {
-        const snap = await get(ref(db, 'app_config/mart_session'));
-        const cur = snap.val();
-        set(ref(db, 'app_config/mart_session'), { active: !cur?.active, user: !cur?.active ? myInfo.nick : "" });
-    };
-
-    // 전역 노출이 필요한 함수들
-    window.toggleItem = (id, cur) => update(ref(db, `family_list/${id}`), { checked: !cur });
-    window.deleteItem = (id) => confirm("삭제할까요?") && remove(ref(db, `family_list/${id}`));
-    window.approveUser = (uid) => update(ref(db, `users/${uid}`), { status: 'approved' });
-    window.deleteUser = (uid) => confirm("멤버를 삭제하시겠습니까?") && remove(ref(db, `users/${uid}`));
 
     init();
 </script>
