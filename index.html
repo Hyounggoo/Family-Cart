@@ -11,7 +11,7 @@
             --c5: #3498db; --c6: #1abc9c; --c7: #9b59b6; --c8: #95a5a6;
         }
         body { font-family: -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
-        .container { max-width: 500px; margin: 0 auto; min-height: 100vh; padding-bottom: 80px; position: relative; }
+        .container { max-width: 500px; margin: 0 auto; min-height: 100vh; padding-bottom: 80px; position: relative; display: none; }
         .page { display: none; }
         .page.active { display: block; }
         .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin: 12px; }
@@ -28,17 +28,32 @@
         .btn-mart { width: 100%; padding: 14px; background: white; border: 2px solid var(--accent); color: var(--accent); margin-bottom: 15px; }
         .btn-mart.active { background: var(--accent); color: white; }
         .btn-done { background: #2196F3; color: white; padding: 12px; width: calc(100% - 24px); margin: 10px 12px; }
+        
+        /* 인증 레이어 스타일 */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
+        .auth-card { background: white; padding: 30px; border-radius: 25px; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 320px; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
+        
         .history-card { margin-bottom: 12px; border-left: 5px solid var(--primary); }
         .history-detail { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; font-size: 0.85rem; }
         .detail-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #ddd; }
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
-        .modal { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 320px; }
         .edit-input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div id="auth-overlay" class="overlay">
+    <div class="auth-card">
+        <h2 style="color:var(--primary); margin-top:0;">👨‍👩‍👧‍👦 Family Entry</h2>
+        <p style="font-size:0.9rem; color:#666;">가족 닉네임을 입력해주세요.</p>
+        <input type="text" id="nickInput" placeholder="닉네임">
+        <input type="password" id="pwInput" placeholder="비밀번호 (관리자용)">
+        <button onclick="window.handleLogin()" class="btn btn-p">입장하기</button>
+    </div>
+</div>
+
+<div class="container" id="main-container">
     <div id="mart-banner" style="display:none; background:var(--accent); color:white; text-align:center; padding:10px; font-weight:bold; position:sticky; top:0; z-index:1100;"></div>
 
     <div id="page-cart" class="page active">
@@ -53,7 +68,7 @@
         <div class="card">
             <button id="martBtn" class="btn btn-mart" onclick="window.toggleMart()">🛒 마트 입장 체크</button>
             <div style="display:flex; gap:8px;">
-                <input type="text" id="itemInput" placeholder="살 것을 입력하세요" style="flex:1; padding:12px; border:1px solid #ddd; border-radius:12px; outline:none;" onkeypress="if(event.keyCode==13) window.addItem()">
+                <input type="text" id="itemInput" placeholder="살 것을 입력하세요" onkeypress="if(event.keyCode==13) window.addItem()">
                 <button onclick="window.addItem()" class="btn btn-p" style="width:60px;">추가</button>
             </div>
         </div>
@@ -93,7 +108,32 @@
     const CAT_INFO = { 1: {name:"농산",color:"var(--c1)"}, 2: {name:"정육/수산",color:"var(--c2)"}, 3: {name:"유제품/빵",color:"var(--c3)"}, 4: {name:"가공/조미료",color:"var(--c4)"}, 5: {name:"냉동/냉장",color:"var(--c5)"}, 6: {name:"주류/음료",color:"var(--c6)"}, 7: {name:"생필품",color:"var(--c7)"}, 8: {name:"기타",color:"var(--c8)"} };
     let myUID = localStorage.getItem('userUID'), myInfo = null;
 
+    // --- 로그인 처리 (문제 1 해결) ---
+    window.handleLogin = async () => {
+        const nick = document.getElementById('nickInput').value.trim();
+        const pw = document.getElementById('pwInput').value.trim();
+        if(!nick) return alert("닉네임을 입력해주세요.");
+
+        const usersSnap = await get(ref(db, 'users'));
+        const users = usersSnap.val() || {};
+        let targetUser = Object.values(users).find(u => u.nick === nick);
+
+        if (targetUser) {
+            localStorage.setItem('userUID', targetUser.uid);
+            location.reload();
+        } else {
+            // 새 유저 생성 (비번 1234면 관리자)
+            const newUID = "u_" + Date.now();
+            const isAdmin = (pw === "1234");
+            const newUser = { uid: newUID, nick, role: isAdmin?'admin':'member', status: 'approved' };
+            await set(ref(db, `users/${newUID}`), newUser);
+            localStorage.setItem('userUID', newUID);
+            location.reload();
+        }
+    };
+
     window.logout = () => { if(confirm("로그아웃 하시겠습니까?")) { localStorage.clear(); location.reload(); } };
+    
     window.switchPage = (pageId) => {
         document.querySelectorAll('.page, .nav-item').forEach(el => el.classList.remove('active'));
         document.getElementById(`page-${pageId}`).classList.add('active');
@@ -102,14 +142,31 @@
     };
 
     const init = async () => {
-        if (!myUID) return;
+        const authOverlay = document.getElementById('auth-overlay');
+        const mainContainer = document.getElementById('main-container');
+
+        if (!myUID) {
+            authOverlay.style.display = 'flex';
+            return;
+        }
+
         const snap = await get(ref(db, `users/${myUID}`));
         myInfo = snap.val();
-        if(!myInfo) return;
-        
+
+        if(!myInfo) {
+            localStorage.clear();
+            authOverlay.style.display = 'flex';
+            return;
+        }
+
+        // 인증 성공 시 UI 표시
+        mainContainer.style.display = 'block';
         set(ref(db, `presence/${myUID}`), { nick: myInfo.nick });
         onDisconnect(ref(db, `presence/${myUID}`)).remove();
+        startSync();
+    };
 
+    const startSync = () => {
         onValue(ref(db, 'users'), uSnap => {
             onValue(ref(db, 'presence'), pSnap => {
                 const online = pSnap.val() || {}, users = uSnap.val() || {};
@@ -152,10 +209,10 @@
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <div>
                             <div style="font-weight:bold;">📅 ${s.date}</div>
-                            <div id="memo-txt-${id}" style="color:#666; font-size:0.8rem; cursor:pointer;">${s.memo || '메모 추가...'}</div>
+                            <div id="memo-txt-${id}" style="color:#666; font-size:0.8rem;">${s.memo || '메모 없음'}</div>
                         </div>
                         <div style="text-align:right;">
-                            <div id="price-txt-${id}" style="color:var(--primary); font-weight:bold; cursor:pointer;">${Number(s.totalPrice || 0).toLocaleString()}원</div>
+                            <div id="price-txt-${id}" style="color:var(--primary); font-weight:bold;">${Number(s.totalPrice || 0).toLocaleString()}원</div>
                             <small>${s.items ? s.items.length : 0}개 품목</small>
                         </div>
                     </div>
@@ -169,8 +226,8 @@
                             <div class="detail-item">
                                 <span>• ${item.name}</span>
                                 <div>
-                                    <button onclick="window.restoreItem('${id}', ${idx})" style="background:none; border:none; color:var(--primary); font-size:1rem; cursor:pointer;">🔄</button>
-                                    <button onclick="window.removeHistoryItem('${id}', ${idx})" style="background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer; margin-left:8px;">×</button>
+                                    <button onclick="window.restoreItem('${id}', ${idx})" title="장바구니로 복사" style="background:none; border:none; color:var(--primary); font-size:1rem; cursor:pointer;">🔄</button>
+                                    <button onclick="window.removeHistoryItem('${id}', ${idx})" title="기록에서 삭제" style="background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer; margin-left:8px;">×</button>
                                 </div>
                             </div>`).join('') : '품목 없음'}
                         <div style="margin-top:10px; text-align:right;">
@@ -188,22 +245,18 @@
         edit.style.display = isVisible ? 'none' : 'block';
     };
 
-    // --- 신규 기능: 히스토리 개별 품목 복구 ---
+    // --- 수정된 기능: 히스토리 품목 복사 (문제 2 해결) ---
     window.restoreItem = async (sessionId, itemIdx) => {
-        if(!confirm("이 품목을 장바구니로 다시 보낼까요?")) return;
+        if(!confirm("이 품목을 장바구니에 다시 추가할까요? (기록은 유지됩니다)")) return;
         const snap = await get(ref(db, `purchase_history/${sessionId}`));
         const session = snap.val();
         const item = session.items[itemIdx];
         
-        // 1. 장바구니에 추가
+        // 장바구니에만 추가 (히스토리 삭제 로직 제거)
         await push(ref(db, 'family_list'), { ...item, checked: false, user: myInfo.nick, ts: Date.now() });
-        // 2. 히스토리에서 해당 품목만 제거
-        session.items.splice(itemIdx, 1);
-        if(session.items.length === 0) await remove(ref(db, `purchase_history/${sessionId}`));
-        else await update(ref(db, `purchase_history/${sessionId}`), { items: session.items });
+        alert("장바구니에 추가되었습니다.");
     };
 
-    // --- 신규 기능: 히스토리 개별 품목 삭제 ---
     window.removeHistoryItem = async (sessionId, itemIdx) => {
         if(!confirm("이 품목만 삭제할까요?")) return;
         const snap = await get(ref(db, `purchase_history/${sessionId}`));
@@ -213,7 +266,6 @@
         else await update(ref(db, `purchase_history/${sessionId}`), { items: session.items });
     };
 
-    // --- 신규 기능: 금액 및 메모 수정 ---
     window.saveEdit = async (id) => {
         const newPrice = document.getElementById(`edit-price-${id}`).value;
         const newMemo = document.getElementById(`edit-memo-${id}`).value;
@@ -223,8 +275,8 @@
 
     window.addItem = () => {
         const input = document.getElementById('itemInput');
-        if(!input.value.trim()) return;
         const name = input.value.trim();
+        if(!name) return;
         const classify = (n) => {
             const map = { 1: ["사과","배","포도","수박","딸기","상추","깻잎","오이","당근","파","양파","마늘"], 2: ["고기","삼겹살","소고기","닭","생선","회","조개"], 3: ["우유","치즈","버터","빵","케익","계란"], 4: ["라면","과자","초코","사탕","참치","스팸","간장","설탕"], 5: ["만두","피자","돈가스","냉동","아이스크림"], 6: ["물","커피","콜라","맥주","소주","술"], 7: ["휴지","치약","샴푸","세제","비누"] };
             for(let id in map) if(map[id].some(k => n.includes(k))) return parseInt(id); return 8;
@@ -235,12 +287,14 @@
 
     window.toggleItem = (id, cur) => update(ref(db, `family_list/${id}`), { checked: !cur });
     window.deleteItem = (id) => confirm("품목을 삭제하시겠습니까?") && remove(ref(db, `family_list/${id}`));
-    window.deleteHistory = (id) => confirm("이 장보기 기록 전체를 삭제할까요?") && remove(ref(db, `purchase_history/${id}`));
+    window.deleteHistory = (id) => confirm("기록을 삭제할까요?") && remove(ref(db, `purchase_history/${id}`));
+    
     window.toggleMart = async () => {
         const snap = await get(ref(db, 'app_config/mart_session'));
         const cur = snap.val();
         set(ref(db, 'app_config/mart_session'), { active: !cur?.active, user: !cur?.active ? myInfo.nick : "" });
     };
+
     window.openFinishModal = () => document.getElementById('finish-modal').style.display = 'flex';
     window.closeModal = () => document.getElementById('finish-modal').style.display = 'none';
     window.confirmFinish = async () => {
@@ -250,7 +304,7 @@
         const now = new Date();
         const sessionData = {
             timestamp: Date.now(),
-            date: `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,
+            date: `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`,
             totalPrice: document.getElementById('totalPrice').value,
             memo: document.getElementById('sessionMemo').value,
             items: checkedItems.map(([id, v]) => ({ name: v.name, cat: v.cat })),
@@ -262,6 +316,7 @@
         window.closeModal();
         window.switchPage('history');
     };
+
     init();
 </script>
 </body>
